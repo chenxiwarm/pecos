@@ -1357,7 +1357,7 @@ class HierarchicalMLModel(pecos.BaseClass):
                 if C.shape[1] > 1:
                     shape = (cur_prob.Y.shape[0], C.shape[1])
                     M = smat.csc_matrix(shape, dtype=cur_prob.Y.dtype)
-                    if "usn" in negative_sampling_scheme:
+                    if 'usn' in negative_sampling_scheme:
                         if M_usn is not None:
                             M += smat_util.binarized(M_usn)
                     if "tfn" in negative_sampling_scheme:

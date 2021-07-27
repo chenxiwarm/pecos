@@ -231,7 +231,10 @@ class Text2Text(object):
             preprocessor = Preprocessor.load(preprocessor_path)
         else:
             LOGGER.info("Parsing text files...")
-            Y, corpus = Preprocessor.load_data_from_file(input_text_path, output_text_path)
+            if negative_sampling_scheme != 'usn':
+                Y, corpus = Preprocessor.load_data_from_file(input_text_path, output_text_path)
+            else:
+                Y, M, corpus = Preprocessor.load_data_from_file(input_text_path, output_text_path, negative_sampling="usn")
             LOGGER.info(
                 f"Training {vectorizer_config['type']} vectorizer on {len(corpus)} input texts..."
             )
@@ -245,7 +248,10 @@ class Text2Text(object):
             X = XLinearModel.load_feature_matrix(X_path)
         else:
             if "corpus" not in locals():
-                Y, corpus = Preprocessor.load_data_from_file(input_text_path, output_text_path)
+                if negative_sampling_scheme != 'usn':
+                    Y, corpus = Preprocessor.load_data_from_file(input_text_path, output_text_path)
+                else:
+                    Y, M, corpus = Preprocessor.load_data_from_file(input_text_path, output_text_path, negative_sampling="usn")
             LOGGER.info(f"Vectorizing {len(corpus)} texts...")
             X = preprocessor.predict(corpus)
             XLinearModel.save_feature_matrix(X_path, X)
@@ -259,9 +265,26 @@ class Text2Text(object):
             Y = smat_util.load_matrix(Y_path)
         else:
             if "Y" not in locals():
-                Y, corpus = Preprocessor.load_data_from_file(input_text_path, output_text_path)
+               if negative_sampling_scheme != 'usn':
+                    Y, corpus = Preprocessor.load_data_from_file(input_text_path, output_text_path)
+               else:
+                   Y, M, corpus = Preprocessor.load_data_from_file(input_text_path, output_text_path, negative_sampling="usn")
             smat_util.save_matrix(Y_path, Y)
         LOGGER.info(f"Output label Y loaded: {Y.shape[0]} samples with {Y.shape[1]} labels.")
+
+
+        # Prepare M, M is always sparse
+        if negative_sampling_scheme == 'usn':
+            M_path = ws.get_path_for_name_and_kwargs("M", XY_kwargs) + ".npz"
+            if path.exists(M_path):
+                M = smat_util.load_matrix(M_path)
+            else:
+                if "M" not in locals():
+                    Y, M, corpus = Preprocessor.load_data_from_file(input_text_path, output_text_path, negative_sampling="usn")
+                smat_util.save_matrix(M_path, M)
+            LOGGER.info(f"Output label M loaded: {M.shape[0]} samples with {M.shape[1]} labels.")
+            usn_match_dict = {0: M, 1: None}
+            LOGGER.info(f"User specified Negative Matrix dictionary usn_match_dict {usn_match_dict}")
 
         # Grid Parameters for XLinearModel
         ranker_param_names = [
@@ -374,6 +397,8 @@ class Text2Text(object):
                 ranker_kwargs_local = ranker_kwargs.copy()
                 # Model Training
                 ranker_kwargs_local.update(indexer_kwargs_local)
+                if "negative_sampling_scheme" in ranker_kwargs and ranker_kwargs["negative_sampling_scheme"] == 'usn':
+                    ranker_kwargs["user_supplied_negatives"] = usn_match_dict
 
                 model_path = ws.get_path_for_name_and_kwargs("model", ranker_kwargs_local)
                 if path.exists(model_path):

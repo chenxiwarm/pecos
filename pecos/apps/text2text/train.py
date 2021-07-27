@@ -18,7 +18,7 @@ from pecos.utils import cli, logging_util
 from pecos.utils.featurization.text.vectorizers import Vectorizer
 from pecos.xmc import Indexer, PostProcessor
 
-from .model import Text2Text
+from pecos.apps.text2text.model import Text2Text
 
 
 def parse_arguments(args):
@@ -205,7 +205,7 @@ def parse_arguments(args):
         "-ns",
         "--negative-sampling",
         type=str,
-        choices=["tfn", "man", "tfn+man"],
+        choices=["tfn", "man", "tfn+man", "usn"],
         default="tfn",
         metavar="STR",
         help="Negative Sampling Schemes",
@@ -297,7 +297,7 @@ def train(args):
         Cn=args.Cn,
         bias=args.bias,
         threshold=args.threshold,
-        negative_sampling_scheme=args.negative_sampling,
+        negative_sampling_scheme= args.negative_sampling,
         pred_kwargs=pred_kwargs,
         workspace_folder=args.workspace_folder,
     )

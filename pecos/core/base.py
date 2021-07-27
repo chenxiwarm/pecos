@@ -481,6 +481,7 @@ class corelib(object):
         Return:
             c_lib (CDLL): Ctypes CDLL library.
         """
+        print(dirname, soname)
         try:
             if forced_rebuild:
                 check_output("make -C {} clean lib".format(dirname), shell=True)

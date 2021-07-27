@@ -94,6 +94,7 @@ class Preprocessor(object):
         maxsplit=-1,
         text_pos=1,
         label_pos=0,
+        negative_sampling='tfn',
     ):
         """Parse a tab-separated text file to a CSR label matrix and a list of text strings.
 
@@ -128,7 +129,9 @@ class Preprocessor(object):
         def convert_label_to_Y(label_strings, L):
             rows, cols, vals = [], [], []
             for i, label in enumerate(label_strings):
-                label_list = list(map(int, label.split(",")))
+                label_list =[x for x in  list(map(int, label.split(","))) if x >= 0]
+                if len(label_list) == 0:
+                    continue
                 rows += [i] * len(label_list)
                 cols += label_list
                 vals += [1] * len(label_list)
@@ -137,16 +140,48 @@ class Preprocessor(object):
             )
             return Y
 
+        
+        def convert_label_to_Y_and_M(label_strings, L):
+              rows_Y, cols_Y, vals_Y = [], [], []
+              rows_M, cols_M, vals_M = [], [], []
+              for i, label in enumerate(label_strings):
+                  label_Y_list = []
+                  label_M_list = []
+                  for x in list(map(int, label.split(","))):
+                      if x >= 0:
+                          label_Y_list.append(x)
+                      else:
+                          label_M_list.append(int((x+1)*-1))
+                  if len(label_Y_list) >  0:
+                      rows_Y += [i] * len(label_Y_list)
+                      cols_Y += label_Y_list
+                      vals_Y += [1] * len(label_Y_list)
+                  if len(label_M_list) > 0:
+                      rows_M += [i] * len(label_M_list)
+                      cols_M += label_M_list
+                      vals_M += [1] * len(label_M_list)
+              Y = smat.csr_matrix(
+                  (vals_Y, (rows_Y, cols_Y)), shape=(len(label_strings), L), dtype=np.float32
+              )
+              M = smat.csr_matrix(
+                  (vals_M, (rows_M, cols_M)), shape=(len(label_strings), L), dtype=np.float32
+                )
+              return Y, M
+
+        negative_sample_matrix = None
+        label_matrix = None
         if label_text_path is not None:
             if not os.path.isfile(label_text_path):
                 raise FileNotFoundError(f"cannot find label text file at: {label_text_path}")
             # this is used to obtain the total number of labels L to construct Y with a correct shape
             L = sum(1 for line in open(label_text_path, "r", encoding="utf-8") if line)
-            label_matrix = convert_label_to_Y(label_strings, L)
-        else:
-            label_matrix = None
-        return label_matrix, corpus
-
+            if negative_sampling != "usn":
+                label_matrix = convert_label_to_Y(label_strings, L)
+            else:
+                label_matrix, negative_sample_matrix = convert_label_to_Y_and_M(label_strings, L)
+        if negative_sampling != "usn":
+            return label_matrix, corpus
+        return label_matrix, negative_sample_matrix, corpus
 
 class BuildPreprocessorCommand(SubCommand):
     """Command to train a preprocessor"""

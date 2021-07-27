@@ -29,6 +29,19 @@ Each line contain two fields, separated by `<TAB>`, the former is relevant outpu
 ```
 OUTPUT_ID1,OUTPUT_ID2,OUTPUT_ID3,...<TAB>INPUT_TEXT
 ```
+In case you want to use user-specified negative instances for each label, you could use the following input text file `training-data.txt`:
+```
+-4,-5,-6,0,1,2<TAB>Alan Turing is widely considered to be the father of theoretical computer science and artificial intelligence.
+-2,-5,-6,0,2,3<TAB>Hinton was co-author of a highly cited paper published in 1986 that popularized the backpropagation algorithm for training multi-layer neural networks.
+-1,-2,-3,3,4,5<TAB>Hinton received the 2018 Turing Award, together with Yoshua Bengio and Yann LeCun, for their work on artificial intelligence and deep learning.
+-1,-2,-3,3,4,5<TAB>In 1989, Yann LeCun et al. applied the standard backpropagation algorithm on neural networks for hand digit recognition.
+```
+Each line contains two fields, separated by `<TAB>`, the former is relevant the negative label ids and positive label ids for each input text, and the second part is the input text:
+```
+-(Negative_ID1+1), -(Negative_ID2+1),... Positive_ID1, Positive_ID2...<TAB>INPUT_TEXT
+```
+Note that since OUTPUT_IDs a.k.a Postive_IDs are indexed from 0, to compose the negative_IDs, we cannot use "-0", hence we use "-1" to indicates the negative samples for OUTPUT_ID=0, and use "-1" to indicate
+the negative sample for OUTPUT_ID=1. 
 
 The output ids are zero-based and correspond to the line numbers in the output label file.
 In particular, the corresponding output label file `output-labels.txt` takes the format of:
@@ -53,6 +66,8 @@ python3 -m pecos.apps.text2text.train \
   --model-folder ./pecos-text2text-model
 ```
 The models are saved into the `./pecos-text2text-model`.
+Note that if you want to use user specified negative samples in your training data (with the negative IDs), you should use
+`--negative-sampling usn` in the training argument. 
 
 For batch Predicting, user should give the input text file `test-data.txt`, which has the same format as `training-data.txt`:
 ```
